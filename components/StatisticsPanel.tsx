@@ -68,8 +68,9 @@ const StatisticsPanel: React.FC<Props> = ({ records }) => {
   const badges = useMemo(() => {
     if (walkerLeaderboard.length === 0) return {};
     
-    const findMax = (key: keyof WalkerStats) => {
-        const sorted = [...walkerLeaderboard].sort((a, b) => (b[key] as number) - (a[key] as number));
+    // We exclude 'name' so that Typescript knows the value is a number
+    const findMax = (key: Exclude<keyof WalkerStats, 'name'>) => {
+        const sorted = [...walkerLeaderboard].sort((a, b) => b[key] - a[key]);
         return sorted[0][key] > 0 ? sorted[0].name : null;
     };
 
