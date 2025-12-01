@@ -3,7 +3,7 @@ import { WalkRecord } from '../types';
 
 export const generateWalkDiary = async (record: WalkRecord): Promise<string> => {
   // 1. 定義 Fallback Key
-  const FALLBACK_KEY = "AIzaSyBfllJaJTZW4Qm_ZZNjh18XTmlP1ljRCmY";
+  const FALLBACK_KEY = "AIzaSyCZYe6ZiHf78RdPtgr6WUX7ApfLg2AeJ_8";
 
   // 2. 嘗試取得 Key
   let apiKey = process.env.API_KEY;
