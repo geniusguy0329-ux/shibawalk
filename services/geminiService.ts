@@ -2,23 +2,22 @@ import { GoogleGenAI } from "@google/genai";
 import { WalkRecord } from '../types';
 
 export const generateWalkDiary = async (record: WalkRecord): Promise<string> => {
-  // 1. 定義 Fallback Key (確保在沒有 .env 的環境下也能運作)
+  // 1. 定義 Fallback Key
   const FALLBACK_KEY = "AIzaSyBfllJaJTZW4Qm_ZZNjh18XTmlP1ljRCmY";
 
   // 2. 嘗試取得 Key
-  // 注意：我們優先使用 process.env.API_KEY (Vite 注入)，若無則使用 Fallback
   let apiKey = process.env.API_KEY;
 
+  // 如果環境變數沒設定好，或變數未被替換(仍是變數名)，就用備用金鑰
   if (!apiKey || apiKey === 'undefined' || apiKey.includes("VITE_API_KEY")) {
     console.log("Using Fallback API Key");
     apiKey = FALLBACK_KEY;
   }
 
-  // Debug log
   console.log("Generating diary with key length:", apiKey?.length);
 
   if (!apiKey) {
-    return "無法連線到柴神雲端 (API Key 失效 - 請聯繫管理員)...";
+    return "無法連線到柴神雲端 (API Key 全面失效)...";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -55,8 +54,9 @@ export const generateWalkDiary = async (record: WalkRecord): Promise<string> => 
       contents: prompt,
     });
     return response.text || "柴神正在休息，無法顯靈寫日記...";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating diary:", error);
-    return "柴神連線中斷 (請檢查 API Key 配額或網路)...";
+    // 回傳詳細錯誤訊息以便除錯
+    return `柴神連線失敗: ${error.message || error.toString()}`;
   }
 };
