@@ -160,7 +160,7 @@ const App: React.FC = () => {
           <h1 className="text-xl font-bold tracking-tight text-stone-800">
             與柴神Hiro <span className="text-orange-500">散步＆回家</span>
           </h1>
-          <p className="text-xs text-stone-400">今天的領土巡視狀況如何呢？</p>
+          <p className="text-xs text-stone-400">每次都出行都是趟華麗的旅行</p>
         </div>
         <button 
           onClick={handleShare}
