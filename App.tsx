@@ -6,7 +6,7 @@ import FootprintMap from './components/FootprintMap';
 import { WalkRecord } from './types';
 import { STORAGE_KEYS, DEFAULT_FIREBASE_CONFIG } from './constants';
 import { initFirebase, saveRecordToCloud, deleteRecordFromCloud, subscribeToWalks } from './services/firebaseService';
-import { Dog, PenTool, History, Map as MapIcon, Share2, Copy, CheckCircle2 } from 'lucide-react';
+import { Dog, PenTool, History, Map as MapIcon, Share2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'auto' | 'manual' | 'history' | 'map'>('auto');
@@ -16,7 +16,7 @@ const App: React.FC = () => {
 
   // Load local data and init Firebase on mount
   useEffect(() => {
-    console.log("App Version: 1.0.2 - Shiba God Sync"); // Version log to force update
+    console.log("App Version: 1.0.9 - FIXED"); 
     const initApp = async () => {
       // 1. Load Local Storage
       const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
@@ -51,16 +51,14 @@ const App: React.FC = () => {
       const unsubscribe = subscribeToWalks((cloudRecords) => {
         setHistory(prevLocal => {
           const cloudIds = new Set(cloudRecords.map(r => r.id));
-          // Keep local records that are NOT in cloud yet (maybe offline created)
+          // Keep local records that are NOT in cloud yet
           const localOnly = prevLocal.filter(r => !cloudIds.has(r.id));
           const merged = [...cloudRecords, ...localOnly].sort((a, b) => b.startTime - a.startTime);
           
-          // Update local storage to match cloud
           try {
-             // Basic Circular reference check wrapper not needed here as records are clean data
              localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged));
           } catch (e) {
-             console.error("Failed to save history to local storage (cloud sync)", e);
+             console.error("Failed to save history to local storage", e);
           }
           return merged;
         });
@@ -70,7 +68,7 @@ const App: React.FC = () => {
   }, [isCloudConnected]);
 
   const saveRecord = async (record: WalkRecord) => {
-    // 1. Save Local (Optimistic UI)
+    // 1. Save Local
     const newHistory = [record, ...history];
     setHistory(newHistory);
     
@@ -80,7 +78,7 @@ const App: React.FC = () => {
       console.error("Failed to save history to local storage", e);
     }
     
-    // 2. Save Cloud (if connected)
+    // 2. Save Cloud
     if (isCloudConnected) {
       try {
         await saveRecordToCloud(record);

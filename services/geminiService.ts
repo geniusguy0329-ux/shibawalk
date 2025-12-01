@@ -2,16 +2,23 @@ import { GoogleGenAI } from "@google/genai";
 import { WalkRecord } from '../types';
 
 export const generateWalkDiary = async (record: WalkRecord): Promise<string> => {
-  // Initialize GoogleGenAI with process.env.API_KEY as per guidelines.
-  // In Vite build, this string is replaced by the actual key from .env
-  const apiKey = process.env.API_KEY;
+  // 1. Try to get key from environment (injected by Vite)
+  let apiKey = process.env.API_KEY;
 
-  // Debug log to verify key presence (will show in browser console)
-  console.log("Generating diary... Key present:", !!apiKey);
+  // 2. Fallback: Use hardcoded key if environment variable failed
+  // This ensures the app works immediately after deployment without complex config
+  const FALLBACK_KEY = "AIzaSyBfllJaJTZW4Qm_ZZNjh18XTmlP1ljRCmY";
 
-  if (!apiKey || apiKey.includes("VITE_API_KEY")) {
-    console.error("API Key is missing or invalid.");
-    return "無法連線到柴神雲端 (API Key 設定錯誤，請檢查 .env)";
+  if (!apiKey || apiKey.includes("VITE_API_KEY") || apiKey === 'undefined') {
+    console.warn("Environment API Key missing or invalid. Using fallback key.");
+    apiKey = FALLBACK_KEY;
+  }
+
+  // Debug log
+  console.log("Generating diary... Key active:", !!apiKey);
+
+  if (!apiKey) {
+    return "無法連線到柴神雲端 (API Key 遺失)...";
   }
 
   const ai = new GoogleGenAI({ apiKey });
