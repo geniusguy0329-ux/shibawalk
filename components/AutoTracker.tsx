@@ -316,7 +316,7 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
               <span>柴神撰寫日記中...</span>
             </>
           ) : (
-            <span>📜 完成並寫日記</span>
+            <span>📜 完成日誌</span>
           )}
         </button>
       </div>
@@ -436,7 +436,7 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
 
           <div className="w-full px-8">
              <div className="bg-white/60 backdrop-blur-sm p-5 rounded-2xl border-2 border-white shadow-sm text-center">
-                <p className="text-stone-500 font-bold mb-1">隨行僕人</p>
+                <p className="text-stone-500 font-bold mb-1">隨行信徒</p>
                 <div className="flex justify-center flex-wrap gap-2">
                     {selectedWalkers.map(id => {
                         const saved = localStorage.getItem('hiro_walkers_v1');
