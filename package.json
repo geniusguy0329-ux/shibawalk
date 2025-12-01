@@ -1,7 +1,7 @@
 {
   "name": "shibawalk",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,10 @@
     "lucide-react": "^0.344.0",
     "firebase": "^10.8.0",
     "leaflet": "^1.9.4",
-    "@google/genai": "latest"
+    "@google/genai": "latest",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.35",
+    "autoprefixer": "^10.4.18"
   },
   "devDependencies": {
     "@types/react": "^18.2.64",
@@ -22,9 +25,6 @@
     "@types/leaflet": "^1.9.8",
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.2.2",
-    "vite": "^5.1.4",
-    "autoprefixer": "^10.4.18",
-    "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1"
+    "vite": "^5.1.4"
   }
 }

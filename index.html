@@ -27,10 +27,8 @@
     <style>
       body {
         font-family: 'Zen Maru Gothic', sans-serif;
-        background-color: #fdfbf7; /* Warm Japanese paper color */
-        color: #4a4a4a; /* Soft charcoal */
-        -webkit-tap-highlight-color: transparent;
-        overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
+        background-color: #fdfbf7;
+        margin: 0;
       }
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
@@ -60,17 +58,16 @@
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "leaflet": "https://aistudiocdn.com/leaflet@^1.9.4",
     "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",
     "vite": "https://aistudiocdn.com/vite@^7.2.6",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-    "leaflet": "https://aistudiocdn.com/leaflet@^1.9.4"
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
-    <!-- 關鍵：Vite 進入點 -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

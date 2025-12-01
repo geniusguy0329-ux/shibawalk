@@ -8,9 +8,10 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-declare var process: {
-  env: {
+// Augment NodeJS namespace if it exists to add API_KEY to ProcessEnv.
+// This avoids "Cannot redeclare block-scoped variable 'process'" error.
+declare namespace NodeJS {
+  interface ProcessEnv {
     API_KEY: string;
-    [key: string]: any;
   }
-};
+}

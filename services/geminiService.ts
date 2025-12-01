@@ -2,9 +2,8 @@ import { GoogleGenAI } from "@google/genai";
 import { WalkRecord } from '../types';
 
 export const generateWalkDiary = async (record: WalkRecord): Promise<string> => {
-  // Guidelines: API key must be obtained exclusively from process.env.API_KEY
-  // Guidelines: Use this process.env.API_KEY string directly when initializing
-  // Guidelines: Do not create getAiClient helper with complex environment checks
+  // Initialize GoogleGenAI with process.env.API_KEY as per guidelines.
+  // Assumes API_KEY is pre-configured and available in the environment.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const dateStr = new Date(record.startTime).toLocaleString('zh-TW');
