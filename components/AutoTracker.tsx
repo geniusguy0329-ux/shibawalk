@@ -388,11 +388,11 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
         <div className="flex-1 flex flex-col items-center justify-center space-y-10 animate-fadeIn py-10">
           
           <div className="text-center space-y-2">
-             <div className="text-2xl font-bold text-stone-600">柴神散步中...</div>
+             <div className="text-2xl font-bold text-stone-600">柴神賜福中...</div>
              <div className="flex justify-center gap-2">
-                <span className="animate-bounce delay-75">🐾</span>
-                <span className="animate-bounce delay-150">🐾</span>
-                <span className="animate-bounce delay-300">🐾</span>
+                <span className="animate-bounce delay-75">💩</span>
+                <span className="animate-bounce delay-150">💩</span>
+                <span className="animate-bounce delay-300">💩</span>
              </div>
           </div>
 
