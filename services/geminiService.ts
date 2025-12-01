@@ -1,27 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { WalkRecord } from '../types';
 
-const getAiClient = () => {
-  // Safe access to process.env for browser environments
-  let apiKey: string | undefined;
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      apiKey = process.env.API_KEY;
-    }
-  } catch (e) {
-    console.warn("Environment access error:", e);
-  }
-
-  if (!apiKey) {
-    console.warn("API Key not found in environment variables.");
-    return null;
-  }
-  return new GoogleGenAI({ apiKey });
-};
-
 export const generateWalkDiary = async (record: WalkRecord): Promise<string> => {
-  const ai = getAiClient();
-  if (!ai) return "無法連線到柴神雲端 (API Key missing).";
+  // Guidelines: API key must be obtained exclusively from process.env.API_KEY
+  // Guidelines: Use this process.env.API_KEY string directly when initializing
+  // Guidelines: Do not create getAiClient helper with complex environment checks
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const dateStr = new Date(record.startTime).toLocaleString('zh-TW');
   const walkers = record.walkers.join(', ');
@@ -57,6 +41,6 @@ export const generateWalkDiary = async (record: WalkRecord): Promise<string> => 
     return response.text || "柴神正在休息，無法顯靈寫日記...";
   } catch (error) {
     console.error("Error generating diary:", error);
-    return "柴神連線中斷...";
+    return "柴神連線中斷 (請檢查 API Key 配額或網路)...";
   }
 };
