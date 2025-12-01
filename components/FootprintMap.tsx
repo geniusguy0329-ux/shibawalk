@@ -44,7 +44,9 @@ const FootprintMap: React.FC<Props> = ({ records }) => {
     if (mapInstanceRef.current) return;
 
     // Default center (Taipei or user location could be better, but we rely on fitting bounds)
-    const map = L.map(mapContainerRef.current).setView([25.0330, 121.5654], 13);
+    const map = L.map(mapContainerRef.current, {
+        zoomControl: false // Custom zoom control or relying on touch
+    }).setView([25.0330, 121.5654], 13);
 
     // Use CartoDB Positron for that "Zakka" / Japanese minimalist paper look
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -74,7 +76,7 @@ const FootprintMap: React.FC<Props> = ({ records }) => {
     const filtered = filterRecords(records);
 
     if (filtered.length === 0) {
-        // Handle empty state visually if needed, or just keep map empty
+        // Handle empty state visually via overlay below
         return;
     }
 
@@ -83,7 +85,7 @@ const FootprintMap: React.FC<Props> = ({ records }) => {
     // Create a custom Shiba Icon
     // Using a divIcon with emoji for simplicity and performance without external images
     const shibaIcon = L.divIcon({
-        html: '<div style="font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));">🐕</div>',
+        html: '<div style="font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); transform: translateY(-5px);">🐕</div>',
         className: 'bg-transparent',
         iconSize: [30, 30],
         iconAnchor: [15, 15],
@@ -101,10 +103,19 @@ const FootprintMap: React.FC<Props> = ({ records }) => {
       // Draw Path
       const polyline = L.polyline(latlngs, {
         color: '#f97316', // Tailwind orange-500
-        weight: 4,
-        opacity: 0.7,
+        weight: 5,
+        opacity: 0.8,
         lineCap: 'round',
-        lineJoin: 'round'
+        lineJoin: 'round',
+        dashArray: '1, 10', // Dotted line effect for "footprints" style
+        dashOffset: '0'
+      }).addTo(layerGroup);
+      
+      // Add a solid line underneath for visibility
+      L.polyline(latlngs, {
+        color: '#f97316',
+        weight: 2,
+        opacity: 0.4,
       }).addTo(layerGroup);
 
       // Add Marker at the end
@@ -136,7 +147,7 @@ const FootprintMap: React.FC<Props> = ({ records }) => {
 
     // Fit map to show all routes
     if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [50, 80] });
     }
 
   }, [records, filter]);
@@ -175,11 +186,15 @@ const FootprintMap: React.FC<Props> = ({ records }) => {
 
       {/* Empty State Overlay if no routes */}
       {filterRecords(records).length === 0 && (
-         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[401]">
-            <div className="bg-white/90 backdrop-blur p-6 rounded-2xl shadow-lg text-center border border-stone-100">
-               <div className="text-4xl mb-2">🗺️</div>
-               <p className="text-stone-600 font-bold">目前沒有路線資料</p>
-               <p className="text-stone-400 text-xs mt-1">請試著切換日期或使用「自動紀錄」功能</p>
+         <div className="absolute inset-0 flex items-center justify-center z-[401] pointer-events-none p-6">
+            <div className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-xl text-center border-4 border-orange-100 transform rotate-1 max-w-sm w-full">
+               <div className="text-6xl mb-4 animate-bounce">🐕</div>
+               <h3 className="text-stone-700 font-black text-xl mb-2">還沒有留下足跡喔</h3>
+               <p className="text-stone-500 font-bold text-sm leading-relaxed">
+                 柴神還沒巡視過這裡...<br/>
+                 趕快帶祂去散步，<br/>
+                 或是切換日期範圍看看？
+               </p>
             </div>
          </div>
       )}
