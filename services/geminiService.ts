@@ -2,23 +2,23 @@ import { GoogleGenAI } from "@google/genai";
 import { WalkRecord } from '../types';
 
 export const generateWalkDiary = async (record: WalkRecord): Promise<string> => {
-  // 1. Try to get key from environment (injected by Vite)
-  let apiKey = process.env.API_KEY;
-
-  // 2. Fallback: Use hardcoded key if environment variable failed
-  // This ensures the app works immediately after deployment without complex config
+  // 1. 定義 Fallback Key (確保在沒有 .env 的環境下也能運作)
   const FALLBACK_KEY = "AIzaSyBfllJaJTZW4Qm_ZZNjh18XTmlP1ljRCmY";
 
-  if (!apiKey || apiKey.includes("VITE_API_KEY") || apiKey === 'undefined') {
-    console.warn("Environment API Key missing or invalid. Using fallback key.");
+  // 2. 嘗試取得 Key
+  // 注意：我們優先使用 process.env.API_KEY (Vite 注入)，若無則使用 Fallback
+  let apiKey = process.env.API_KEY;
+
+  if (!apiKey || apiKey === 'undefined' || apiKey.includes("VITE_API_KEY")) {
+    console.log("Using Fallback API Key");
     apiKey = FALLBACK_KEY;
   }
 
   // Debug log
-  console.log("Generating diary... Key active:", !!apiKey);
+  console.log("Generating diary with key length:", apiKey?.length);
 
   if (!apiKey) {
-    return "無法連線到柴神雲端 (API Key 遺失)...";
+    return "無法連線到柴神雲端 (API Key 失效 - 請聯繫管理員)...";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -45,7 +45,7 @@ export const generateWalkDiary = async (record: WalkRecord): Promise<string> => 
     - 使用繁體中文。
     - 語氣要有「本柴神」的威嚴但又很可愛。
     - 提到散步者時可以稱呼他們為「隨從」或「鏟屎官」。
-    - 字數控制在 150 字以內。
+    - 字數控制在 120 字以內。
     - 加入適當的 emoji。
   `;
 

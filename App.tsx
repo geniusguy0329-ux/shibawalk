@@ -16,7 +16,7 @@ const App: React.FC = () => {
 
   // Load local data and init Firebase on mount
   useEffect(() => {
-    console.log("App Version: 1.0.10 - HTML TYPO FIXED"); 
+    console.log("App Version: 1.1.0 - Importmap Removal Confirmed"); 
     const initApp = async () => {
       // 1. Load Local Storage
       const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
@@ -58,7 +58,7 @@ const App: React.FC = () => {
           try {
              localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged));
           } catch (e) {
-             console.error("Failed to save history to local storage", e);
+             console.error("Failed to save history to local storage (cloud sync)", e);
           }
           return merged;
         });
