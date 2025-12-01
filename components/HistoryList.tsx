@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { WalkRecord } from '../types';
-import { Clock, MapPin, User, ChevronDown, Sparkles, Cloud, CloudOff, Settings } from 'lucide-react';
+import { Clock, MapPin, User, ChevronDown, Sparkles, BarChart3, X } from 'lucide-react';
+import StatisticsPanel from './StatisticsPanel';
 
 interface Props {
   records: WalkRecord[];
-  isCloudConnected: boolean;
-  onOpenSettings: () => void;
 }
 
-const HistoryList: React.FC<Props> = ({ records, isCloudConnected, onOpenSettings }) => {
+const HistoryList: React.FC<Props> = ({ records }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showStats, setShowStats] = useState(false);
 
   // Sort by date desc
   const sortedRecords = [...records].sort((a, b) => b.startTime - a.startTime);
@@ -17,42 +17,29 @@ const HistoryList: React.FC<Props> = ({ records, isCloudConnected, onOpenSetting
   return (
     <div className="space-y-6 pb-24 animate-fadeIn relative">
       
-      {/* Cloud Status Area */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-stone-100">
-         <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <div className={`p-2 rounded-xl ${isCloudConnected ? 'bg-green-100 text-green-600' : 'bg-stone-100 text-stone-400'}`}>
-                  {isCloudConnected ? <Cloud className="w-6 h-6" /> : <CloudOff className="w-6 h-6" />}
-               </div>
-               <div>
-                  <h3 className="text-base font-black text-stone-700">雲端同步中心</h3>
-                  <p className={`text-xs font-bold ${isCloudConnected ? 'text-green-600' : 'text-stone-400'}`}>
-                     {isCloudConnected ? '● 已連線同步中' : '○ 尚未設定連線'}
-                  </p>
-               </div>
-            </div>
-            
-            <button 
-               onClick={onOpenSettings}
-               className="bg-stone-800 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg active:scale-95 transition-transform"
-            >
-               <Settings className="w-4 h-4" />
-               {isCloudConnected ? '設定' : '連線'}
-            </button>
-         </div>
-         
-         {!isCloudConnected && (
-            <div className="mt-3 bg-orange-50 p-3 rounded-xl border border-orange-100">
-               <p className="text-xs text-orange-800 font-bold leading-relaxed">
-                  想要家人手機同步看到紀錄嗎？<br/>
-                  點擊「連線」貼上柴神通行證代碼即可！
-               </p>
-            </div>
-         )}
-      </div>
+      {/* Stats Toggle Button */}
+      {records.length > 0 && (
+        <button
+          onClick={() => setShowStats(!showStats)}
+          className={`
+            w-full py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 transition-all shadow-sm
+            ${showStats 
+              ? 'bg-stone-200 text-stone-600' 
+              : 'bg-white text-orange-600 border border-orange-100 shadow-orange-50'}
+          `}
+        >
+          {showStats ? <X className="w-5 h-5" /> : <BarChart3 className="w-5 h-5" />}
+          {showStats ? '收起統計' : '查看散步統計與榮譽榜'}
+        </button>
+      )}
+
+      {/* Statistics Panel */}
+      {showStats && (
+         <StatisticsPanel records={records} />
+      )}
 
       {/* List Header */}
-      <div className="flex items-center justify-between px-2">
+      <div className="flex items-center justify-between px-2 pt-2">
          <h3 className="font-black text-stone-600 text-lg">歷史紀錄 ({sortedRecords.length})</h3>
       </div>
 

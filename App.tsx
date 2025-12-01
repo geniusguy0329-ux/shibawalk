@@ -3,21 +3,19 @@ import AutoTracker from './components/AutoTracker';
 import ManualEntry from './components/ManualEntry';
 import HistoryList from './components/HistoryList';
 import FootprintMap from './components/FootprintMap';
-import SettingsModal from './components/SettingsModal';
-import { WalkRecord, FirebaseConfig } from './types';
-import { STORAGE_KEYS } from './constants';
-import { initFirebase, saveRecordToCloud, subscribeToWalks, isFirebaseInitialized } from './services/firebaseService';
+import { WalkRecord } from './types';
+import { STORAGE_KEYS, DEFAULT_FIREBASE_CONFIG } from './constants';
+import { initFirebase, saveRecordToCloud, subscribeToWalks } from './services/firebaseService';
 import { Dog, PenTool, History, Map as MapIcon } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'auto' | 'manual' | 'history' | 'map'>('auto');
   const [history, setHistory] = useState<WalkRecord[]>([]);
-  const [showSettings, setShowSettings] = useState(false);
-  const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | null>(null);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
 
-  // Load local data and config on mount
+  // Load local data and init Firebase on mount
   useEffect(() => {
+    // 1. Load Local Storage
     const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
     if (savedHistory) {
       try {
@@ -27,16 +25,15 @@ const App: React.FC = () => {
       }
     }
 
-    const savedConfig = localStorage.getItem('hiro_firebase_config');
-    if (savedConfig) {
-      try {
-        const config = JSON.parse(savedConfig);
-        setFirebaseConfig(config);
-        const success = initFirebase(config);
-        setIsCloudConnected(success);
-      } catch (e) {
-        console.error("Config load error", e);
+    // 2. Init Firebase automatically
+    try {
+      const success = initFirebase(DEFAULT_FIREBASE_CONFIG);
+      setIsCloudConnected(success);
+      if (success) {
+        console.log("Firebase initialized successfully");
       }
+    } catch (e) {
+      console.error("Firebase init error", e);
     }
   }, []);
 
@@ -44,10 +41,6 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isCloudConnected) {
       const unsubscribe = subscribeToWalks((cloudRecords) => {
-        // Merge strategy: Cloud is source of truth, but we keep local-only records if any (optional)
-        // Here we'll simply trust the cloud query which returns latest 100
-        // But to be safe, we merge with local IDs to avoid flashing or losing offline data immediately
-        
         setHistory(prevLocal => {
           const cloudIds = new Set(cloudRecords.map(r => r.id));
           // Keep local records that are NOT in cloud yet (maybe offline created)
@@ -55,7 +48,11 @@ const App: React.FC = () => {
           const merged = [...cloudRecords, ...localOnly].sort((a, b) => b.startTime - a.startTime);
           
           // Update local storage to match cloud
-          localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged));
+          try {
+             localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged));
+          } catch (e) {
+             console.error("Failed to save history to local storage (cloud sync)", e);
+          }
           return merged;
         });
       });
@@ -67,7 +64,13 @@ const App: React.FC = () => {
     // 1. Save Local (Optimistic UI)
     const newHistory = [record, ...history];
     setHistory(newHistory);
-    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(newHistory));
+    
+    try {
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(newHistory));
+    } catch (e) {
+      console.error("Failed to save history to local storage", e);
+      // We continue to try saving to cloud even if local storage fails
+    }
     
     // 2. Save Cloud (if connected)
     if (isCloudConnected) {
@@ -76,36 +79,16 @@ const App: React.FC = () => {
         console.log("Saved to cloud successfully");
       } catch (e) {
         console.error("Failed to save to cloud", e);
-        alert("⚠️ 儲存到本機成功，但上傳雲端失敗 (請檢查網路)");
+        // Silent fail is okay, local storage has it (hopefully).
       }
     }
 
     setActiveTab('history');
   };
 
-  const handleSaveConfig = (config: FirebaseConfig) => {
-    setFirebaseConfig(config);
-    localStorage.setItem('hiro_firebase_config', JSON.stringify(config));
-    const success = initFirebase(config);
-    setIsCloudConnected(success);
-    if (success) {
-      alert("✅ 雲端連線成功！正在同步資料...");
-    } else {
-      alert("❌ 連線失敗，請檢查設定碼是否正確。");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-stone-800 font-sans max-w-md mx-auto relative shadow-2xl overflow-hidden flex flex-col">
-      {/* Settings Modal */}
-      {showSettings && (
-        <SettingsModal 
-          onClose={() => setShowSettings(false)} 
-          onSave={handleSaveConfig}
-          initialConfig={firebaseConfig || undefined}
-        />
-      )}
-
+      
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-stone-100 px-6 py-4 flex items-center justify-between">
         <div>
@@ -132,8 +115,6 @@ const App: React.FC = () => {
            <div className="p-4 flex-1">
              <HistoryList 
                records={history} 
-               isCloudConnected={isCloudConnected}
-               onOpenSettings={() => setShowSettings(true)}
              />
            </div>
         )}

@@ -66,11 +66,13 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
       if ('geolocation' in navigator) {
          watchIdRef.current = navigator.geolocation.watchPosition(
           (position) => {
-            setCoordinates(prev => [...prev, {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              timestamp: position.timestamp
-            }]);
+            // Strictly construct a clean object to avoid any potential circular refs from the position object
+            const newCoord: Coordinates = {
+              latitude: Number(position.coords.latitude),
+              longitude: Number(position.coords.longitude),
+              timestamp: Number(position.timestamp)
+            };
+            setCoordinates(prev => [...prev, newCoord]);
             setGpsError(null);
           },
           (error) => {
@@ -119,14 +121,21 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
        return w ? w.name : 'Unknown';
     });
 
+    // Clean copy of coordinates
+    const cleanCoordinates = coordinates.map(c => ({
+      latitude: c.latitude,
+      longitude: c.longitude,
+      timestamp: c.timestamp
+    }));
+
     const record: WalkRecord = {
       id: Date.now().toString(),
       mode: WalkMode.AUTO,
-      walkers: walkerNames,
+      walkers: [...walkerNames],
       startTime: startTime,
       endTime: Date.now(),
       durationSeconds: duration,
-      routeCoordinates: coordinates,
+      routeCoordinates: cleanCoordinates,
       mood: details.mood,
       hasPooped: details.hasPooped,
       poopCondition: details.poopCondition,
