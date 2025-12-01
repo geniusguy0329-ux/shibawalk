@@ -16,7 +16,7 @@ const App: React.FC = () => {
 
   // Load local data and init Firebase on mount
   useEffect(() => {
-    console.log("App Version: 1.1.1 - ERROR DETAILS ENABLED"); 
+    console.log("App Version: 2.0.0 - Migrated to Vercel"); 
     const initApp = async () => {
       // 1. Load Local Storage
       const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
