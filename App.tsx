@@ -16,7 +16,7 @@ const App: React.FC = () => {
 
   // Load local data and init Firebase on mount
   useEffect(() => {
-    console.log("App Version: 1.1.0 - Importmap Removal Confirmed"); 
+    console.log("App Version: 1.1.1 - ERROR DETAILS ENABLED"); 
     const initApp = async () => {
       // 1. Load Local Storage
       const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
@@ -160,7 +160,7 @@ const App: React.FC = () => {
           <h1 className="text-xl font-bold tracking-tight text-stone-800">
             與柴神Hiro <span className="text-orange-500">散步＆回家</span>
           </h1>
-          <p className="text-xs text-stone-400">每趟的旅行都是場華麗的冒險</p>
+          <p className="text-xs text-stone-400">今天的領土巡視狀況如何呢？</p>
         </div>
         <button 
           onClick={handleShare}
