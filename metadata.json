@@ -1,0 +1,7 @@
+{
+  "name": "shibawalk",
+  "description": "A Japanese Zakka style walking tracker for Hiro the Shiba Inu, featuring auto/manual modes, multi-walker selection, and AI-powered diary generation.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
