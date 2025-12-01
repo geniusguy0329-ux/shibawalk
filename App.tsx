@@ -16,6 +16,7 @@ const App: React.FC = () => {
 
   // Load local data and init Firebase on mount
   useEffect(() => {
+    console.log("App Version: 1.0.2 - Shiba God Sync"); // Version log to force update
     const initApp = async () => {
       // 1. Load Local Storage
       const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);

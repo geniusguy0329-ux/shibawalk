@@ -3,8 +3,18 @@ import { WalkRecord } from '../types';
 
 export const generateWalkDiary = async (record: WalkRecord): Promise<string> => {
   // Initialize GoogleGenAI with process.env.API_KEY as per guidelines.
-  // Assumes API_KEY is pre-configured and available in the environment.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // In Vite build, this string is replaced by the actual key from .env
+  const apiKey = process.env.API_KEY;
+
+  // Debug log to verify key presence (will show in browser console)
+  console.log("Generating diary... Key present:", !!apiKey);
+
+  if (!apiKey || apiKey.includes("VITE_API_KEY")) {
+    console.error("API Key is missing or invalid.");
+    return "無法連線到柴神雲端 (API Key 設定錯誤，請檢查 .env)";
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   const dateStr = new Date(record.startTime).toLocaleString('zh-TW');
   const walkers = record.walkers.join(', ');
