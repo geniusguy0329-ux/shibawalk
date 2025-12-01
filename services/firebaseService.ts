@@ -3,6 +3,7 @@ import {
   getFirestore, 
   collection, 
   setDoc, 
+  deleteDoc,
   doc, 
   query, 
   orderBy, 
@@ -11,17 +12,23 @@ import {
   limit
 } from "firebase/firestore";
 import { FirebaseConfig, WalkRecord } from "../types";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
-export const initFirebase = (config: FirebaseConfig) => {
+export const initFirebase = async (config: FirebaseConfig) => {
   try {
     if (!getApps().length) {
       app = initializeApp(config);
     } else {
       app = getApp();
     }
+    
+    // Auth
+    const auth = getAuth(app);
+    await signInAnonymously(auth);
+
     db = getFirestore(app);
     return true;
   } catch (error) {
@@ -37,6 +44,16 @@ export const saveRecordToCloud = async (record: WalkRecord) => {
     await setDoc(doc(db, "walks", record.id), record);
   } catch (error) {
     console.error("Error saving to cloud:", error);
+    throw error;
+  }
+};
+
+export const deleteRecordFromCloud = async (recordId: string) => {
+  if (!db) return;
+  try {
+    await deleteDoc(doc(db, "walks", recordId));
+  } catch (error) {
+    console.error("Error deleting from cloud:", error);
     throw error;
   }
 };

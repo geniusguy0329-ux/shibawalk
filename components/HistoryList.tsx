@@ -1,37 +1,69 @@
 import React, { useState } from 'react';
 import { WalkRecord } from '../types';
-import { Clock, MapPin, User, ChevronDown, Sparkles, BarChart3, X } from 'lucide-react';
+import { Clock, MapPin, User, ChevronDown, Sparkles, BarChart3, X, Trash2, Edit2 } from 'lucide-react';
 import StatisticsPanel from './StatisticsPanel';
 
 interface Props {
   records: WalkRecord[];
+  onDelete?: (id: string) => void;
 }
 
-const HistoryList: React.FC<Props> = ({ records }) => {
+const HistoryList: React.FC<Props> = ({ records, onDelete }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Sort by date desc
   const sortedRecords = [...records].sort((a, b) => b.startTime - a.startTime);
 
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (confirm("確定要刪除這條散步紀錄嗎？")) {
+      const password = prompt("請輸入管理密碼以刪除紀錄：");
+      if (password === '1124') {
+        if (onDelete) onDelete(id);
+      } else if (password !== null) {
+        alert("密碼錯誤，無法刪除！");
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 pb-24 animate-fadeIn relative">
       
-      {/* Stats Toggle Button */}
-      {records.length > 0 && (
-        <button
-          onClick={() => setShowStats(!showStats)}
-          className={`
-            w-full py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 transition-all shadow-sm
-            ${showStats 
-              ? 'bg-stone-200 text-stone-600' 
-              : 'bg-white text-orange-600 border border-orange-100 shadow-orange-50'}
-          `}
-        >
-          {showStats ? <X className="w-5 h-5" /> : <BarChart3 className="w-5 h-5" />}
-          {showStats ? '收起統計' : '查看散步統計與榮譽榜'}
-        </button>
-      )}
+      <div className="flex gap-2">
+        {/* Stats Toggle Button */}
+        {records.length > 0 && (
+          <button
+            onClick={() => setShowStats(!showStats)}
+            className={`
+              flex-1 py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 transition-all shadow-sm
+              ${showStats 
+                ? 'bg-stone-200 text-stone-600' 
+                : 'bg-white text-orange-600 border border-orange-100 shadow-orange-50'}
+            `}
+          >
+            {showStats ? <X className="w-5 h-5" /> : <BarChart3 className="w-5 h-5" />}
+            {showStats ? '收起統計' : '查看統計'}
+          </button>
+        )}
+
+        {/* Edit Mode Button */}
+        {records.length > 0 && (
+          <button
+            onClick={() => setIsEditing(!isEditing)}
+            className={`
+              px-5 rounded-2xl font-bold transition-all shadow-sm border
+              ${isEditing 
+                ? 'bg-stone-800 text-white border-stone-800' 
+                : 'bg-white text-stone-400 border-stone-200 hover:border-orange-200'}
+            `}
+            title={isEditing ? "完成編輯" : "編輯/刪除紀錄"}
+          >
+            {isEditing ? <X className="w-6 h-6" /> : <Edit2 className="w-6 h-6" />}
+          </button>
+        )}
+      </div>
 
       {/* Statistics Panel */}
       {showStats && (
@@ -41,6 +73,11 @@ const HistoryList: React.FC<Props> = ({ records }) => {
       {/* List Header */}
       <div className="flex items-center justify-between px-2 pt-2">
          <h3 className="font-black text-stone-600 text-lg">歷史紀錄 ({sortedRecords.length})</h3>
+         {isEditing && (
+            <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-full animate-pulse">
+               編輯刪除模式中
+            </span>
+         )}
       </div>
 
       {sortedRecords.length === 0 ? (
@@ -58,7 +95,20 @@ const HistoryList: React.FC<Props> = ({ records }) => {
             const timeStr = date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
             
             return (
-              <div key={record.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden transition-all duration-300">
+              <div key={record.id} className={`
+                  bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden transition-all duration-300 relative
+                  ${isEditing ? 'border-l-4 border-l-red-400 pr-12' : ''}
+              `}>
+                {/* Delete Button (Only in Edit Mode) */}
+                {isEditing && (
+                  <button
+                    onClick={(e) => handleDeleteClick(e, record.id)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-100 text-red-500 p-3 rounded-full hover:bg-red-500 hover:text-white transition-colors z-20"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
+
                 <div 
                   className="p-4 flex items-center justify-between cursor-pointer active:bg-stone-50"
                   onClick={() => setExpandedId(isExpanded ? null : record.id)}

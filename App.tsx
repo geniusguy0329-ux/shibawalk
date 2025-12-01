@@ -5,36 +5,43 @@ import HistoryList from './components/HistoryList';
 import FootprintMap from './components/FootprintMap';
 import { WalkRecord } from './types';
 import { STORAGE_KEYS, DEFAULT_FIREBASE_CONFIG } from './constants';
-import { initFirebase, saveRecordToCloud, subscribeToWalks } from './services/firebaseService';
-import { Dog, PenTool, History, Map as MapIcon } from 'lucide-react';
+import { initFirebase, saveRecordToCloud, deleteRecordFromCloud, subscribeToWalks } from './services/firebaseService';
+import { Dog, PenTool, History, Map as MapIcon, Share2, Copy, CheckCircle2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'auto' | 'manual' | 'history' | 'map'>('auto');
   const [history, setHistory] = useState<WalkRecord[]>([]);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Load local data and init Firebase on mount
   useEffect(() => {
-    // 1. Load Local Storage
-    const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
-    if (savedHistory) {
-      try {
-        setHistory(JSON.parse(savedHistory));
-      } catch (e) {
-        console.error("Failed to parse history", e);
+    const initApp = async () => {
+      // 1. Load Local Storage
+      const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
+      if (savedHistory) {
+        try {
+          setHistory(JSON.parse(savedHistory));
+        } catch (e) {
+          console.error("Failed to parse history", e);
+        }
       }
-    }
 
-    // 2. Init Firebase automatically
-    try {
-      const success = initFirebase(DEFAULT_FIREBASE_CONFIG);
-      setIsCloudConnected(success);
-      if (success) {
-        console.log("Firebase initialized successfully");
+      // 2. Init Firebase automatically
+      try {
+        const success = await initFirebase(DEFAULT_FIREBASE_CONFIG);
+        setIsCloudConnected(success);
+        if (success) {
+          console.log("Firebase initialized successfully");
+        }
+      } catch (e) {
+        console.error("Firebase init error", e);
+      } finally {
+        setIsInitializing(false);
       }
-    } catch (e) {
-      console.error("Firebase init error", e);
-    }
+    };
+
+    initApp();
   }, []);
 
   // Subscribe to Cloud Updates if connected
@@ -49,6 +56,7 @@ const App: React.FC = () => {
           
           // Update local storage to match cloud
           try {
+             // Basic Circular reference check wrapper not needed here as records are clean data
              localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(merged));
           } catch (e) {
              console.error("Failed to save history to local storage (cloud sync)", e);
@@ -69,7 +77,6 @@ const App: React.FC = () => {
       localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(newHistory));
     } catch (e) {
       console.error("Failed to save history to local storage", e);
-      // We continue to try saving to cloud even if local storage fails
     }
     
     // 2. Save Cloud (if connected)
@@ -79,12 +86,71 @@ const App: React.FC = () => {
         console.log("Saved to cloud successfully");
       } catch (e) {
         console.error("Failed to save to cloud", e);
-        // Silent fail is okay, local storage has it (hopefully).
       }
     }
 
     setActiveTab('history');
   };
+
+  const deleteRecord = async (recordId: string) => {
+    // 1. Update Local
+    const newHistory = history.filter(r => r.id !== recordId);
+    setHistory(newHistory);
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(newHistory));
+    } catch (e) {
+      console.error("Failed to update local storage after delete", e);
+    }
+
+    // 2. Delete from Cloud
+    if (isCloudConnected) {
+      try {
+        await deleteRecordFromCloud(recordId);
+        console.log("Deleted from cloud");
+      } catch (e) {
+        console.error("Failed to delete from cloud", e);
+        alert("刪除失敗：雲端同步錯誤");
+      }
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: '與柴神Hiro散步＆回家',
+      text: '快來看看柴神的散步紀錄！',
+      url: window.location.href
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.log('Share canceled');
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert("連結已複製！傳給家人吧！");
+      } catch (err) {
+        console.error("Copy failed", err);
+      }
+    }
+  };
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-[#fdfbf7] flex flex-col items-center justify-center p-8 space-y-6">
+         <div className="text-6xl animate-bounce">🐕</div>
+         <h2 className="text-2xl font-black text-stone-700 tracking-widest">柴神連線中...</h2>
+         <div className="flex gap-2">
+            <div className="w-3 h-3 bg-orange-400 rounded-full animate-ping"></div>
+            <div className="w-3 h-3 bg-orange-400 rounded-full animate-ping delay-150"></div>
+            <div className="w-3 h-3 bg-orange-400 rounded-full animate-ping delay-300"></div>
+         </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-stone-800 font-sans max-w-md mx-auto relative shadow-2xl overflow-hidden flex flex-col">
@@ -97,6 +163,13 @@ const App: React.FC = () => {
           </h1>
           <p className="text-xs text-stone-400">今天的領土巡視狀況如何呢？</p>
         </div>
+        <button 
+          onClick={handleShare}
+          className="bg-stone-100 p-2 rounded-full hover:bg-orange-100 hover:text-orange-600 transition-colors"
+          title="分享給家人"
+        >
+          <Share2 className="w-5 h-5" />
+        </button>
       </header>
 
       {/* Main Content */}
@@ -115,6 +188,7 @@ const App: React.FC = () => {
            <div className="p-4 flex-1">
              <HistoryList 
                records={history} 
+               onDelete={deleteRecord}
              />
            </div>
         )}
