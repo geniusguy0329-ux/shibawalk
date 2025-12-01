@@ -19,6 +19,28 @@ interface ActiveWalkState {
   coordinates: Coordinates[];
 }
 
+// Custom SVG for Chinese Gold Ingot (Sycee/Yuanbao)
+const GoldIngotIcon = ({ className, delay }: { className?: string, delay?: string }) => (
+  <svg 
+    viewBox="0 0 64 48" 
+    className={`${className} drop-shadow-md`} 
+    style={{ animationDelay: delay }}
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    {/* Base of the ingot */}
+    <path d="M4 24 C4 42 32 46 60 24 L54 16 H10 L4 24 Z" fill="#F59E0B" /> {/* Darker Gold/Orange base */}
+    <path d="M8 24 C8 38 32 42 56 24" stroke="#D97706" strokeWidth="2" strokeLinecap="round" /> {/* Shadow line */}
+    
+    {/* Top part */}
+    <path d="M10 16 L18 8 H46 L54 16 H10 Z" fill="#FBBF24" /> {/* Medium Gold */}
+    
+    {/* Center bump */}
+    <ellipse cx="32" cy="12" rx="12" ry="6" fill="#FDE68A" /> {/* Highlight Gold */}
+    <ellipse cx="32" cy="12" rx="8" ry="3" fill="#FFFBEB" fillOpacity="0.6" /> {/* Shine */}
+  </svg>
+);
+
 const AutoTracker: React.FC<Props> = ({ onSave }) => {
   const [isTracking, setIsTracking] = useState(false);
   const [selectedWalkers, setSelectedWalkers] = useState<string[]>([]);
@@ -389,14 +411,14 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
           
           <div className="text-center space-y-2">
              <div className="text-2xl font-bold text-stone-600">柴神賜福中...</div>
-             <div className="flex justify-center gap-2">
-                <span className="animate-bounce delay-75">💩</span>
-                <span className="animate-bounce delay-150">💩</span>
-                <span className="animate-bounce delay-300">💩</span>
+             <div className="flex justify-center gap-3 mt-4">
+                <GoldIngotIcon className="w-12 h-12 animate-bounce" delay="75ms" />
+                <GoldIngotIcon className="w-12 h-12 animate-bounce" delay="150ms" />
+                <GoldIngotIcon className="w-12 h-12 animate-bounce" delay="300ms" />
              </div>
           </div>
 
-          <div className="relative">
+          <div className="relative mt-4">
             <div className="absolute inset-0 bg-orange-300 rounded-full blur-2xl opacity-40 animate-pulse"></div>
             <div className="relative w-72 h-72 bg-white rounded-full border-[10px] border-orange-100 shadow-2xl flex flex-col items-center justify-center transform hover:scale-105 transition-transform duration-500">
               <span className="text-stone-400 text-base font-bold uppercase tracking-widest mb-2">TIME</span>
