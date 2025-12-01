@@ -3,11 +3,20 @@ import { WalkFormData, Coordinates, WalkRecord, WalkMode } from '../types';
 import WalkerSelector from './WalkerSelector';
 import WalkDetailsForm from './WalkDetailsForm';
 import { DEFAULT_WALKERS } from '../constants';
-import { Play, Square, MapPin, Navigation, AlertTriangle } from 'lucide-react';
+import { Play, Square, MapPin, AlertTriangle, Loader2 } from 'lucide-react';
 import { generateWalkDiary } from '../services/geminiService';
 
 interface Props {
   onSave: (record: WalkRecord) => void;
+}
+
+// Key for saving active walk state to survive page reloads/background kills
+const ACTIVE_WALK_KEY = 'hiro_active_walk_state';
+
+interface ActiveWalkState {
+  startTime: number;
+  walkers: string[];
+  coordinates: Coordinates[];
 }
 
 const AutoTracker: React.FC<Props> = ({ onSave }) => {
@@ -20,6 +29,9 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   
+  // Loading State
+  const [isSaving, setIsSaving] = useState(false);
+  
   // Finish Form Data
   const [details, setDetails] = useState<WalkFormData>({
     mood: '開心 🐕',
@@ -30,12 +42,104 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
   
   const timerRef = useRef<number | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const wakeLockRef = useRef<any>(null); // Reference for Screen Wake Lock
 
+  // 1. Initialize: Check if we need to restore a walk from background/refresh
   useEffect(() => {
+    const savedStateStr = localStorage.getItem(ACTIVE_WALK_KEY);
+    if (savedStateStr) {
+      try {
+        const savedState: ActiveWalkState = JSON.parse(savedStateStr);
+        // Restore state
+        setIsTracking(true);
+        setStartTime(savedState.startTime);
+        setSelectedWalkers(savedState.walkers);
+        setCoordinates(savedState.coordinates || []);
+        
+        // Immediately calculate correct duration (Time Diff Strategy)
+        const now = Date.now();
+        setDuration(Math.floor((now - savedState.startTime) / 1000));
+        
+        console.log("Restored active walk from storage");
+      } catch (e) {
+        console.error("Failed to restore walk state", e);
+        localStorage.removeItem(ACTIVE_WALK_KEY);
+      }
+    }
+    
     return () => {
       cleanupTracking();
     };
   }, []);
+
+  // 2. Tracking Effect: Handle Timer, GPS, WakeLock, and Persistence
+  useEffect(() => {
+    if (isTracking && startTime) {
+      // A. Request Wake Lock (Keep screen/CPU alive)
+      const requestWakeLock = async () => {
+        try {
+          if ('wakeLock' in navigator) {
+            // @ts-ignore
+            wakeLockRef.current = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock active');
+          }
+        } catch (err) {
+          console.warn('Wake Lock failed:', err);
+        }
+      };
+      requestWakeLock();
+
+      // B. Start Timer (Time Diff Strategy)
+      // We calculate (Now - Start) every second, so even if backgrounding pauses the timer,
+      // the moment it wakes up, the duration jumps to the correct value.
+      timerRef.current = window.setInterval(() => {
+        const now = Date.now();
+        const secondsElapsed = Math.floor((now - startTime) / 1000);
+        setDuration(secondsElapsed);
+      }, 1000);
+
+      // C. Start GPS
+      if ('geolocation' in navigator) {
+         watchIdRef.current = navigator.geolocation.watchPosition(
+          (position) => {
+            const newCoord: Coordinates = {
+              latitude: Number(position.coords.latitude),
+              longitude: Number(position.coords.longitude),
+              timestamp: Number(position.timestamp)
+            };
+            
+            setCoordinates(prev => {
+              const updated = [...prev, newCoord];
+              // Save to local storage for persistence (only save every update to avoid spamming if needed, but safe for small arrays)
+              saveStateToStorage(startTime, selectedWalkers, updated);
+              return updated;
+            });
+            setGpsError(null);
+          },
+          (error) => {
+            console.error("GPS Error", error);
+            setGpsError("無法取得 GPS (請檢查權限)");
+          },
+          { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        );
+      } else {
+        setGpsError("裝置不支援 GPS");
+      }
+    } else {
+      // Not tracking
+      cleanupTracking();
+    }
+  }, [isTracking, startTime]); // Re-run if tracking starts
+
+  // Helper to persist state
+  const saveStateToStorage = (start: number, walkers: string[], coords: Coordinates[]) => {
+    const state: ActiveWalkState = {
+      startTime: start,
+      walkers: walkers,
+      coordinates: coords
+    };
+    localStorage.setItem(ACTIVE_WALK_KEY, JSON.stringify(state));
+  };
 
   const cleanupTracking = () => {
     if (timerRef.current) {
@@ -46,49 +150,28 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
     }
+    // Release Wake Lock
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().then(() => {
+        wakeLockRef.current = null;
+        console.log('Wake Lock released');
+      });
+    }
   };
 
   const startWalk = () => {
     setGpsError(null);
     if (selectedWalkers.length === 0) return;
 
-    try {
-      setIsTracking(true);
-      const start = Date.now();
-      setStartTime(start);
-      
-      // Start Timer
-      timerRef.current = window.setInterval(() => {
-        setDuration(prev => prev + 1);
-      }, 1000);
-
-      // Start GPS Tracking
-      if ('geolocation' in navigator) {
-         watchIdRef.current = navigator.geolocation.watchPosition(
-          (position) => {
-            // Strictly construct a clean object to avoid any potential circular refs from the position object
-            const newCoord: Coordinates = {
-              latitude: Number(position.coords.latitude),
-              longitude: Number(position.coords.longitude),
-              timestamp: Number(position.timestamp)
-            };
-            setCoordinates(prev => [...prev, newCoord]);
-            setGpsError(null);
-          },
-          (error) => {
-            console.error("GPS Error", error);
-            setGpsError("無法取得 GPS (請檢查權限)");
-          },
-          { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
-        );
-      } else {
-        setGpsError("裝置不支援 GPS");
-      }
-    } catch (e) {
-      console.error("Start walk error:", e);
-      setIsTracking(false);
-      setGpsError("啟動失敗");
-    }
+    const start = Date.now();
+    setStartTime(start);
+    setCoordinates([]);
+    setDuration(0);
+    
+    // Save initial state immediately
+    saveStateToStorage(start, selectedWalkers, []);
+    
+    setIsTracking(true);
   };
 
   const handleStopClick = () => {
@@ -100,6 +183,9 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
     cleanupTracking();
     setIsTracking(false);
     setShowFinishForm(true);
+    
+    // Clear persisted state as walk is finished
+    localStorage.removeItem(ACTIVE_WALK_KEY);
   };
 
   const handleCancelStop = () => {
@@ -107,55 +193,64 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
   };
 
   const handleFinalSave = async () => {
-    if (!startTime) return;
+    if (!startTime || isSaving) return;
 
-    // Use current walkers list to map IDs to Names for the record
-    let allWalkers = DEFAULT_WALKERS;
+    setIsSaving(true); // Start loading
+
     try {
-        const saved = localStorage.getItem('hiro_walkers_v1');
-        if (saved) allWalkers = JSON.parse(saved);
-    } catch(e) {}
+      let allWalkers = DEFAULT_WALKERS;
+      try {
+          const saved = localStorage.getItem('hiro_walkers_v1');
+          if (saved) allWalkers = JSON.parse(saved);
+      } catch(e) {}
 
-    const walkerNames = selectedWalkers.map(id => {
-       const w = allWalkers.find((aw: any) => aw.id === id);
-       return w ? w.name : 'Unknown';
-    });
+      const walkerNames = selectedWalkers.map(id => {
+         const w = allWalkers.find((aw: any) => aw.id === id);
+         return w ? w.name : 'Unknown';
+      });
 
-    // Clean copy of coordinates
-    const cleanCoordinates = coordinates.map(c => ({
-      latitude: c.latitude,
-      longitude: c.longitude,
-      timestamp: c.timestamp
-    }));
+      const cleanCoordinates = coordinates.map(c => ({
+        latitude: c.latitude,
+        longitude: c.longitude,
+        timestamp: c.timestamp
+      }));
 
-    const record: WalkRecord = {
-      id: Date.now().toString(),
-      mode: WalkMode.AUTO,
-      walkers: [...walkerNames],
-      startTime: startTime,
-      endTime: Date.now(),
-      durationSeconds: duration,
-      routeCoordinates: cleanCoordinates,
-      mood: details.mood,
-      hasPooped: details.hasPooped,
-      poopCondition: details.poopCondition,
-      notes: details.notes,
-      date: new Date(startTime).toISOString(),
-    };
+      const record: WalkRecord = {
+        id: Date.now().toString(),
+        mode: WalkMode.AUTO,
+        walkers: [...walkerNames],
+        startTime: startTime,
+        endTime: Date.now(),
+        durationSeconds: duration,
+        routeCoordinates: cleanCoordinates,
+        mood: details.mood,
+        hasPooped: details.hasPooped,
+        poopCondition: details.poopCondition,
+        notes: details.notes,
+        date: new Date(startTime).toISOString(),
+      };
 
-    const diary = await generateWalkDiary(record);
-    record.aiDiaryEntry = diary;
+      // Generate AI Diary (Takes time)
+      const diary = await generateWalkDiary(record);
+      record.aiDiaryEntry = diary;
 
-    onSave(record);
-    
-    // Reset
-    setShowFinishForm(false);
-    setDuration(0);
-    setStartTime(null);
-    setCoordinates([]);
-    setDetails({ mood: '開心 🐕', hasPooped: false, notes: '' });
-    setSelectedWalkers([]);
-    setGpsError(null);
+      onSave(record);
+      
+      // Reset
+      setShowFinishForm(false);
+      setDuration(0);
+      setStartTime(null);
+      setCoordinates([]);
+      setDetails({ mood: '開心 🐕', hasPooped: false, notes: '' });
+      setSelectedWalkers([]);
+      setGpsError(null);
+      localStorage.removeItem(ACTIVE_WALK_KEY); // Double check cleanup
+    } catch (error) {
+      console.error("Save error:", error);
+      alert("儲存時發生錯誤，請重試");
+    } finally {
+      setIsSaving(false); // Stop loading
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -184,9 +279,23 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
         
         <button
           onClick={handleFinalSave}
-          className="w-full mt-8 bg-stone-800 text-white py-5 rounded-2xl font-bold text-2xl shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2"
+          disabled={isSaving}
+          className={`
+            w-full mt-8 py-5 rounded-2xl font-bold text-2xl shadow-xl transition-all flex items-center justify-center gap-2
+            ${isSaving 
+              ? 'bg-stone-400 text-stone-200 cursor-wait' 
+              : 'bg-stone-800 text-white active:scale-95'
+            }
+          `}
         >
-          <span>📜 完成並寫日記</span>
+          {isSaving ? (
+            <>
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <span>柴神撰寫日記中...</span>
+            </>
+          ) : (
+            <span>📜 完成並寫日記</span>
+          )}
         </button>
       </div>
     );
@@ -226,7 +335,6 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
       {!isTracking ? (
         <div className="space-y-8 animate-fadeIn flex flex-col items-center">
           
-          {/* Header Area */}
           <div className="text-center pt-6 pb-2 w-full">
              <div className="text-8xl mb-4 filter drop-shadow-md animate-bounce">
                🐕
@@ -309,7 +417,6 @@ const AutoTracker: React.FC<Props> = ({ onSave }) => {
                 <p className="text-stone-500 font-bold mb-1">隨行僕人</p>
                 <div className="flex justify-center flex-wrap gap-2">
                     {selectedWalkers.map(id => {
-                        // Just a quick lookup for display
                         const saved = localStorage.getItem('hiro_walkers_v1');
                         const list = saved ? JSON.parse(saved) : DEFAULT_WALKERS;
                         const w = list.find((x: any) => x.id === id);
